@@ -1,0 +1,33 @@
+{
+  "name": "mvpnodejs",
+  "version": "0.1.0",
+  "description": "This project is a rest api building in nodejs and express",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon index.js --exec babel-node",
+    "start": "babel-node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paramirez/mvp.git"
+  },
+  "author": "Pablo Ramirez",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/paramirez/mvp/issues"
+  },
+  "homepage": "https://github.com/paramirez/mvp#readme",
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
+    "bcrypt": "^1.0.3",
+    "body-parser": "^1.18.2",
+    "cors": "^2.8.4",
+    "express": "^4.16.2",
+    "jsonwebtoken": "^8.1.0",
+    "mongoose": "^5.0.0-rc0",
+    "mongoose-sequence": "^4.0.1",
+    "morgan": "^1.9.0"
+  }
+}
