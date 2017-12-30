@@ -3,66 +3,50 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { secrectKeySystem, expireTimeToken } from '../../../core/global';
 
-//Definir middlerwares
-function login(req, res, next) {
-    userModel.findOne({ email: req.body.email })
-        .populate({
-            path: 'rol',
-            match: { isDeleted: false }
-        })
-        .exec((err, user) => {
-            if (err) {
-                if (err.name === "CastError") {
-                    res.status(404).json({ success: false, message: `User with value (${err.value}) not found` });
-                } else {
-                    res.status(500).json(err)
-                }
-            } else {
-                if (user !== null) {
-                    if (!user.isDeleted || user.rol !== null) {
-                        bcrypt.compare(req.body.password, user.password, (err, passwordMatch) => {
-                            if (err) { res.status(500).json(err) }
-                            if (passwordMatch) {
-                                const token = jwt.sign({ email: user.email, rol: user.rol.rolId, publicId: user.userId }, secrectKeySystem, { expiresIn: expireTimeToken });
-                                user.token = token;
-                                user.save((err) => {
-                                    if (err) { res.status(500).json(err) }
-                                    else {
-                                        res.json({ success: true, token });
-                                    }
-                                });
-                            } else {
-                                res.status(400).json({ success: false, message: 'Invalid password' });
-                            }
-                        });
-                    } else {
-                        res.status(403).json({ success: false, message: 'The user is disable' });
-                    }
-                } else {
-                    res.status(400).json({ success: false, message: 'Invalid email' });
-                }
-            }
-        });
-};
-
-function authenticate(req, res, next) {
-    const token = req.headers['x-access-token'] || '';
-    if (token !== '') {
-        jwt.verify(token, secrectKeySystem, (err, decode) => {
-            if (err) {
-                res.status(403).json({ success: false, message: 'Forbidden' });
-            } else {
-                req.decode = decode;
-                next();
-            }
-        });
-    } else {
-        res.status(403).json({ success: false, message: 'Forbidden' });
-    }
-};
-
-
 export default {
-    login,
-    authenticate
+	/**
+	 * @author Pablo Ramirez
+	 * @description Metodo que permite iniciar sesión usando JsonWebToken
+	 */
+	async login(req, res) {
+		try {
+			const user = await userModel
+				.findOne({ email: req.body.email })
+				.populate({ path: 'rol', match: { isDeleted: false } });
+			if (user === null) return res.status(400).json({ message: 'Invalid email' });
+			if (user.isDeleted || user.rol === null)
+				return res.status(403).json({ message: 'User is disable' });
+			if (!bcrypt.compareSync(req.body.password, user.password))
+				return res.status(400).json({ message: 'Invalid password' });
+			const token = jwt.sign(
+				{ email: user.email, userId: user.id },
+				secrectKeySystem,
+				{
+					expiresIn: expireTimeToken
+				}
+			);
+			user.token = token;
+			const userSaved = await user.save();
+			res.json({ success: true, status: 200, token });
+		} catch (error) {
+			if (error.name === 'CastError') return res.status(400).json(error);
+			res.status(500).json(error);
+		}
+	},
+
+	/**
+	 * @author Pablo Ramirez
+	 * @description Middlerware que permite autenticarse para acceder a las distantas rutas
+	 */
+	authenticate(req, res, next) {
+		const token = req.headers['x-access-token'] || '';
+		if (token === '')
+			return res.status(403).json({ success: false, message: 'Forbidden' });
+		jwt.verify(token, secrectKeySystem, (err, decode) => {
+			if (err)
+				return res.status(403).json({ success: false, message: 'Forbidden' });
+			req.decode = decode;
+			next();
+		});
+	}
 };

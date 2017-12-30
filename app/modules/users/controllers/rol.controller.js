@@ -1,82 +1,101 @@
 import rolModel from '../models/rol.model';
-
-function rolError(err, res) {
-    if (err.name === "CastError") {
-        res.status(404).json({ success: false, message: `Rol with value (${err.value}) not found` });
-    } else {
-        res.status(500).json(err)
-    }
-};
-
-function createRol(req, res) {
-    const rolQuery = new rolModel(req.body);
-    rolQuery.save((err, rol) => {
-        if (err) { 
-            if(err.code === 11000) {
-                res.status(400).json({success:false, message: err.errmsg});
-            }else {
-                res.status(500).json({success:false, message: err});
-            }
-        }
-        else {
-            if (rol) { res.json({ success: true, message: 'Rol created' }) }
-            else { res.json(500).json({ success: true, message: 'Rol create not found' }) }
-        }
-    });
-};
-
-function getAllRols(req, res) {
-    rolModel.find({ isDeleted: false }, 'name isDeleted rolId -_id', (err, rols) => {
-        if (err) { res.status(500).json(err) }
-        else {
-            res.json({ success: true, rols });
-        }
-    });
-};
-
-function updateRol(req, res) {
-    const rolId = req.params.publicId;
-    rolModel.findOneAndUpdate({ rolId, isDeleted: false }, req.body, (err, rol) => {
-        if (err) { rolError(err, res) }
-        else { res.json({ success: true, message: 'Rol updated' }) }
-    });
-};
-
-function getRol(req, res) {
-    const rolId = req.params.publicId;
-    rolModel.findOne({ rolId, isDeleted: false }, 'name isDeleted rolId -_id', (err, rol) => {
-        if (err) { rolError(err, res) }
-        else {
-            if (rol !== null) {
-                res.json({ success: true, rol })
-            } else {
-                res.status(404).json({ success: false, message: 'Rol not found' });
-            }
-        }
-    });
-};
-
-function removeRol(req, res) {
-    const rolId = req.params.publicId;
-    rolModel.findOneAndUpdate({ rolId, isDeleted: false }, { isDeleted: true }, (err, rol) => {
-        if (err) { rolError(err, res) }
-        else { res.json({ success: true, message: 'Rol remove' }) }
-    });
-};
-
-function activeRol(req, res) {
-    const rolId = req.params.publicId;
-    rolModel.findOneAndUpdate({ rolId, isDeleted: true }, { isDeleted: false }, (err, rol) => {
-        if (err) { rolError(err, res) }
-        else { res.json({ success: true, message: 'Rol activated' }) }
-    });
-};
+import { rolPublicFieldAccess } from '../users.settings';
 
 export default {
-    createRol,
-    getAllRols,
-    updateRol,
-    getRol,
-    removeRol,
-    activeRol
+	/**
+	 * @author Pablo Ramirez
+	 * @description Ingresa un nuevo rol en la base de datos
+	 */
+	async createRol(req, res, next) {
+		try {
+			const rolQuery = new rolModel(req.body);
+			const rol = await rolQuery.save();
+			res.json({ status: 200 });
+		} catch (error) {
+			next(error);
+		}
+	},
+	/**
+	 * @author Pablo Ramirez
+	 * @description Consulta todos los roles que no se encuentren deshabilidatos
+	 */
+	async getAllRols(req, res, next) {
+		try {
+			const data = await rolModel.find({ isDeleted: false }, rolPublicFieldAccess);
+			res.json({ status: 200, data });
+		} catch (error) {
+			next(error);
+		}
+	},
+	/**
+	 * @author Pablo Ramirez
+	 * @description Actualiza el rol.
+	 */
+	async updateRol(req, res, next) {
+		try {
+			const rolId = req.params.publicId || '';
+			const rol = await rolModel.findOneAndUpdate(
+				{ rolId, isDeleted: false },
+				req.body
+			);
+			if (rol !== null) return res.json({ status: 200 });
+			res.status(404).json({ status: 404 });
+		} catch (error) {
+			next(error);
+		}
+	},
+	/**
+	 * @author Pablo Ramirez
+	 * @description Consulta un rol apartir de su id publico
+	 */
+	async getRol(req, res, next) {
+		try {
+			const rolId = req.params.publicId;
+			const data = await rolModel.findOne(
+				{ rolId, isDeleted: false },
+				rolPublicFieldAccess
+			);
+			if (data === null)
+				return res.status(404).json({
+					status: 404
+				});
+			res.json({ status: 200, data });
+		} catch (error) {
+			next(error);
+		}
+	},
+	/**
+	 * @author Pablo Ramirez
+	 * @description Deshabilita un rol a partir de su id publico
+	 */
+	async removeRol(req, res, next) {
+		try {
+			const rolId = req.params.publicId;
+			const rol = await rolModel.findOneAndUpdate(
+				{ rolId, isDeleted: false },
+				{ isDeleted: true }
+			);
+			if (rol !== null) return res.json({ status: 200 });
+			res.status(404).json({ status: 404 });
+		} catch (error) {
+			next(error);
+		}
+	},
+	/**
+	 * @author Pablo Ramirez
+	 * @description Habilita un rol a partir de su id publico
+	 */
+	async activeRol(req, res, next) {
+		try {
+			const rolId = req.params.publicId;
+			const rol = await rolModel.findOneAndUpdate(
+				{ rolId, isDeleted: true },
+				{ isDeleted: false }
+			);
+			if (rol !== null) return res.json({ status: 200 });
+			res.status(404).json({ status: 404 });
+		} catch (error) {
+			next(error);
+		}
+	}
 };
