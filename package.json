@@ -27,7 +27,6 @@
 		"express": "^4.16.2",
 		"jsonwebtoken": "^8.1.0",
 		"mongoose": "^5.0.0-rc0",
-		"mongoose-sequence": "^4.0.1",
-		"morgan": "^1.9.0"
+		"mongoose-sequence": "^4.0.1"
 	}
 }
